@@ -40,6 +40,7 @@ docker compose up -d
 
 🌞 **Limiter l'accès aux ressources**
 
+
 - limiter la RAM que peut utiliser chaque conteneur à 1G
 - limiter à 1CPU chaque conteneur
 
