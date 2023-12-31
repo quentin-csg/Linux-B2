@@ -8,14 +8,13 @@ services:
     depends_on:
       - mysql
       - phpmyadmin
-    command: sh -c "echo 'phpMyAdmin is ready on http://localhost:8081 and a web page on http://localhost:8080' && apache2-foreground"
+    command: sh -c "echo 'phpMyAdmin is ready on http://localhost:8081 (root:root), and a web page on http://localhost:8080' && apache2-foreground"
 
   mysql:
     image: mysql
     volumes:
-      - ./php/sql/:/docker-entrypoint-initdb.d/initial.sql
-      # Le fichier initial.sql sera exécuté lors du démarrage du conteneur
-      - ./mysql_data:/var/lib/mysql
+      - ./sql/:/docker-entrypoint-initdb.d/initial.sql
+    # - ./mysql_data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: utilisateurs

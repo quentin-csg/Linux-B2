@@ -5,184 +5,24 @@
 - [TP2 : Utilisation courante de Docker](#tp2--utilisation-courante-de-docker)
   - [Sommaire](#sommaire)
 - [I. Commun à tous : PHP](#i-commun-à-tous--php)
-- [II Dév. Python](#ii-dév-python)
 - [II Admin. Maîtrise de la stack PHP](#ii-admin-maîtrise-de-la-stack-php)
-- [II Secu. Big brain](#ii-secu-big-brain)
 
 # I. Commun à tous : PHP
-
-# TP2 Commun : Stack PHP
-
-![PHP](./img/php.jpg)
-
-*Copain PHP.*
-
-**Droit au but : vous allez conteneuriser votre projet PHP Symfony.**
-
-> *Installer MySQL et Apache sur votre machine avec WAMP/LAMP/MAMP c'est bien si on s'en passe non ?*
-
-Le but donc :
-
-➜ **avoir un seul `docker-compose.yml` qui lance tout**
-
-- un conteneur avec Apache/PHP installés qui fait tourner votre code
-- un conteneur base de données MySQL
-- un conteneur PHPMyAdmin pour gérer la base
-
-➜ **on utilise des images officielles dans l'idéal**
-
-- on évite de rédiger des `Dockerfile` si on peut
-- surtout si c'est des images officielles
-
-➜ **donc pour bosser sur le projet :**
-
-- `docker compose up`
-- tu dév sur ta machine, ça s'exécute sur des conteneurs
-- `docker compose down` quand t'as fini de dév, plus rien qui tourne
-
-➜ **et surtout : juste un fichier `docker-compose.yml` à se partager au sein du groupe**
-
-- quelques lignes
-- pour avoir exactement le même environnement
-- à la racine du projet dans le dépôt git c'est carré
-
-## Sommaire
-
-- [TP2 Commun : Stack PHP](#tp2-commun--stack-php)
-  - [Sommaire](#sommaire)
-- [0. Setup](#0-setup)
-- [I. Packaging de l'app PHP](#i-packaging-de-lapp-php)
-
-# 0. Setup
-
-➜ **Dans le TP, l'emoji 📜 figurera à la fin de chaque partie pour t'indiquer quels fichiers tu dois rendre**
-
-Bon, je vais pas y couper, et j'vais découvrir encore plein de trucs que j'ai ps envie de découvrir.
-
-T'es un dév. Tu dév avec ta machine, ton OS. Donc ça veut dire...
-
-➜ **Installer Docker sur votre PC**
-
-- pas dans une VM quoi, sur ton PC
-- doc officielle
-- je préviens tout de suite pour les Windowsiens :
-  - Docker nécessite soit WSL soit Hyper-V
-  - je vous recommande WSL parce que Hyper-V il va péter votre VirtualBox
-  - et même avec WSL, magic happens
-  - on l'a vu en cours et premier TP, Docker, c'est une techno Linux...
-
-> Même si j'étais dév sous Windows, je préférerai lancer moi-même une VM Linux et faire deux trois bails d'intégration pour que je puisse lancer des commandes `docker run` sur mon PC qui lance des conteneurs dans la VM. Je peux vous apprendre c'est pas compliqué, faut juste lancer la VM quand tu veux use Docker (au lieu de lancer Docker, ça revient au même quoi finalement, t'façon il lance un noyau Linux pour toi le bougre si tu le fais pas toi-même). J'suis ptet trop un hippie après hein.
-
-![Docker on Windows](./img/docker_on_windows.jpg)
 
 # I. Packaging de l'app PHP
 
 🌞 **`docker-compose.yml`**
 
-- genre `tp2/php/docker-compose.yml` dans votre dépôt git de rendu
-- votre code doit être à côté dans un dossier `src` : `tp2/php/src/tous_tes_bails.php`
-- s'il y a un script SQL qui est injecté dans la base à son démarrage, il doit être dans `tp2/php/sql/seed.sql`
-  - on appelle ça "seed" une database quand on injecte le schéma de base et éventuellement des données de test
-- bah juste voilà ça doit fonctionner : je git clone ton truc, je `docker compose up` et ça doit fonctionne :)
-- ce serait cool que l'app affiche un truc genre `App is ready on http://localhost:80` truc du genre dans les logs !
-
-➜ **Un environnement de dév local propre avec Docker**
-
-- 3 conteneurs, donc environnement éphémère/destructible
-- juste un **`docker-compose.yml`** donc facilement transportable
-- TRES facile de mettre à jour chacun des composants si besoin
-  - oh tiens il faut ajouter une lib !
-  - oh tiens il faut une autre version de PHP !
-  - tout ça c'est np
-
-
-
-
-# II Dév. Python
-
-## Sommaire
-
-- [TP2 dév : packaging et environnement de dév local](#tp2-dév--packaging-et-environnement-de-dév-local)
-  - [Sommaire](#sommaire)
-- [I. Packaging](#i-packaging)
-  - [1. Calculatrice](#1-calculatrice)
-  - [2. Chat room](#2-chat-room)
-
-# I. Packaging
-
-## 1. Calculatrice
-
-🌞 **Packager l'application de calculatrice réseau**
-
-- packaging du serveur, pas le client
-- créer un répertoire `calc_build/` dans votre dépôt git de rendu
-- créer un `Dockerfile` qui permet de build l'image
-- créer un `docker-compose.yml` qui permet de l'ancer un conteneur calculatrice
-- écrire vitefé un `README.md` qui indique les commandes pour build et run l'app
-
-🌞 **Environnement : adapter le code si besoin**
-
-- on doit pouvoir choisir sur quel port écoute la calculatrice si on définit la variable d'environnement `CALC_PORT`
-- votre code doit donc :
-  - récupérer la valeur de la variable d'environnement `CALC_PORT` si elle existe
-  - vous devez vérifier que c'est un entier
-  - écouter sur ce port là
-- ainsi, on peut choisir le port d'écoute comme ça avec `docker run` :
-
-```bash
-$ docker run -e CALC_PORT=6767 -d calc
+```shell
+git clone https://gitlab.com/quentin_csg/rendu-tp-linux-b2.git # Dans /home/$USER/Documents
 ```
 
-🌞 **Logs : adapter le code si besoin**
+```shell
+# Dans /home/$USER/Documents/rendu-tp-linux-b2/tp2/php
 
-- tous les logs de la calculatrice DOIVENT sortir en sortie standard
-- en effet, il est courant qu'un conteneur génère tous ses logs en sortie standard
-- on peut ensuite les consulter avec `docker logs`
-
-📜 **Dossier `tp2/calc/` dans le dépôt git de rendu**
-
-- `Dockerfile`
-- `docker-compose.yml`
-- `README.md`
-- `calc.py` : le code de l'app calculatrice
-
-## 2. Chat room
-
-![Cat Whale](./img/cat_whale.png)
-
-🌞 **Packager l'application de chat room**
-
-- pareil : on package le serveur
-- `Dockerfile` et `docker-compose.yml`
-- code adapté :
-  - logs en sortie standard
-  - variable d'environnement `CHAT_PORT` pour le port d'écoute
-  - variable d'environnement `MAX_USERS` pour limiter le nombre de users dans chaque room (ou la room s'il y en a qu'une)
-- encore un README propre qui montre comment build et comment run (en démontrant l'utilisation des variables d'environnement)
-
-📜 **Dossier `tp2/chat/` dans le dépôt git de rendu**
-
-- `Dockerfile`
-- `docker-compose.yml`
-- `README.md`
-- `chat.py` : le code de l'app chat room
-
-➜ **J'espère que ces cours vous ont apporté du recul sur la relation client/serveur**
-
-- deux programmes distincts, chacun a son rôle
-  - le serveur
-    - est le gardien de la logique, le maître du jeu, garant du respect des règles
-    - c'est votre bébé vous le maîtrisez
-    - opti et sécu en tête
-  - le client c'est... le client
-    - faut juste qu'il soit joooooli
-    - garder à l'esprit que n'importe qui peut le modifier ou l'adapter
-    - ou carrément dév son propre client
-- y'a même des milieux comme le web, où les gars qui dév les serveurs (Apache, NGINX, etc) c'est pas DU TOUT les mêmes qui dévs les clients (navigateurs Web, `curl`, librairie `requests` en Python, etc)
-
-
-
-
+docker build . -t php:7.2-apache
+docker compose up -d
+```
 
 # II Admin. Maîtrise de la stack PHP
 

@@ -1,10 +1,9 @@
-# Utilisez l'image officielle PHP avec Apache
 FROM php:7.2-apache
 
-WORKDIR /tp2
+WORKDIR /rendu-tp-linux-b2/tp2/php
 
-# Copiez les fichiers PHP dans le répertoire web du conteneur
-COPY /php /var/www/html/
+COPY /src /var/www/html/
 
-# Installez le module MySQLi pour la connexion à MySQL
+COPY /sql /var/www/html/
+
 RUN docker-php-ext-install mysqli
