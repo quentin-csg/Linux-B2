@@ -1,6 +1,6 @@
 FROM php:7.2-apache
 
-WORKDIR /rendu-tp-linux-b2/tp2/php
+WORKDIR /rendu-tp-linux-b2/TP2/php
 
 COPY /src /var/www/html/
 
