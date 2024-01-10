@@ -18,7 +18,7 @@ git clone https://gitlab.com/quentin_csg/rendu-tp-linux-b2.git # Dans /home/$USE
 ```
 
 ```shell
-# Dans /home/$USER/Documents/rendu-tp-linux-b2/tp2/php
+# Dans /home/$USER/Documents/rendu-tp-linux-b2/TP2/php
 
 docker build . -t php:7.2-apache
 docker compose up -d
@@ -81,12 +81,12 @@ On va ajouter un reverse proxy dans le mix !
 - il doit inclure un quatrième conteneur : un reverse proxy NGINX
   - image officielle !
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ docker pull nginx
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ docker pull nginx
 ```
 
   - un volume pour ajouter un fichier de conf
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ cat ./conf/nginx.conf
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ cat ./conf/nginx.conf
 server {
     listen       80;
     server_name  www.supersite.com;
@@ -121,13 +121,13 @@ nginx:
   - `www.supersite.com` qui pointe vers l'IP de la machine qui héberge les conteneurs
   - `pma.supersite.com` qui pointe vers la même IP (`pma` pour PHPMyAdmin)
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ cat /etc/hosts | grep supersite
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ cat /etc/hosts | grep supersite
 172.17.0.1 www.supersite.com
 172.17.0.1 pma.supersite.com
 ```
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ curl http://www.supersite.com:8080/
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ curl http://www.supersite.com:8080/
 <h1>Site pas ouf</h1>
 ```
 
@@ -152,13 +152,12 @@ quentin@test:~/Documents/rendu-tp-linux-b2/tp2$ openssl req -new -newkey rsa:409
 🌞 **Générer une clé et un certificat de CA**
 
 ```bash
-# mettez des infos dans le prompt, peu importe si c'est fake
-# on va vous demander un mot de passe pour chiffrer la clé aussi
-$ openssl genrsa -des3 -out CA.key 4096
-$ openssl req -x509 -new -nodes -key CA.key -sha256 -days 1024  -out CA.pem
-$ ls
-# le pem c'est le certificat (clé publique)
-# le key c'est la clé privée
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl genrsa -des3 -out CA.key 4096
+
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -x509 -new -nodes -key CA.key -sha256 -days 1024  -out CA.pem
+
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ ls
+CA.key  CA.pem  php  tp2.md  www.supersite.com.crt  www.supersite.com.key
 ```
 
 Il est temps de générer une clé et un certificat que notre serveur web pourra utiliser afin de proposer une connexion HTTPS.
@@ -166,53 +165,68 @@ Il est temps de générer une clé et un certificat que notre serveur web pourra
 🌞 **Générer une clé et une demande de signature de certificat pour notre serveur web**
 
 ```bash
-$ openssl req -new -nodes -out www.supersite.com.csr -newkey rsa:4096 -keyout www.supersite.com.key
-$ ls
-# www.supersite.com.csr c'est la demande de signature
-# www.supersite.com.key c'est la clé qu'utilisera le serveur web
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -new -nodes -out www.supersite.com.csr -newkey rsa:4096 -keyout www.supersite.com.key
+
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ ls www*
+www.supersite.com.crt  www.supersite.com.csr  www.supersite.com.key
 ```
 
 🌞 **Faire signer notre certificat par la clé de la CA**
 
-```ext
+```shell
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ cat v3.ext 
 authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
+basicConstraints=CA:TRUE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = www.supersite.com
-DNS.2 = www.tp7.secu
 ```
 
 - effectuer la demande de signature pour récup un certificat signé par votre CA :
 
 ```bash
-$ openssl x509 -req -in www.supersite.com.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out www.supersite.com.crt -days 500 -sha256 -extfile v3.ext
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl x509 -req -in www.supersite.com.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out www.supersite.com.crt -days 500 -sha256 -extfile v3.ext
+Signature ok
+subject=C = AU, ST = Some-State, O = Internet Widgits Pty Ltd
+Getting CA Private Key
+Enter pass phrase for CA.key:
 ```
 
 🌞 **Ajustez la configuration NGINX**
 
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' php-php_apache-1
+172.22.0.5
+```
+
+
 - le site web doit être disponible en HTTPS en utilisant votre clé et votre certificat
 
-```nginx
+```shell
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ cat nginx.conf 
 server {
-    listen       443 ssl;
     server_name  www.supersite.com;
+    listen       172.22.0.5:443 ssl;
 
-    ssl_certificate /home/quentin/Documents/rendu-tp-linux-b2/tp2/php/www.supersite.com.crt
-    ssl_certificate_key /home/quentin/Documents/rendu-tp-linux-b2/tp2/php/www.supersite.com.key
+    ssl_certificate /home/quentin/Documents/rendu-tp-linux-b2/TP2/www.supersite.com.crt
+    ssl_certificate_key /home/quentin/Documents/rendu-tp-linux-b2/TP2/www.supersite.com.key
 
     location / {
         proxy_pass   http://php_apache;
     }
 }
+
 ```
 
 🌞 **Prouvez avec un `curl` que vous accédez au site web**
 
 - depuis votre PC
 - avec un `curl -k` car il ne reconnaît pas le certificat là
+```
+
+```
 
 🌞 **Ajouter le certificat de la CA dans votre navigateur**
 
