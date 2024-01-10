@@ -44,15 +44,29 @@ docker compose up -d
 - limiter la RAM que peut utiliser chaque conteneur à 1G
 - limiter à 1CPU chaque conteneur
 
-> Ca se fait avec une option sur `docker run` ou son équivalent en syntaxe `docker-compose.yml`.
-
 🌞 **No `root`**
 
 - s'assurer que chaque conteneur n'utilise pas l'utilisateur `root`
 - mais bien un utilisateur dédié
 - on peut préciser avec une option du `run` sous quelle identité le processus sera lancé
 
-> Je rappelle qu'un conteneur met en place **un peu** d'isolation, **mais le processus tourne concrètement sur la machine hôte**. Donc il faut bien que, sur la machine hôte, il s'exécute sous l'identité d'un utilisateur, comme n'importe quel autre processus.
+```docker
+# Dans le docker compose
+deploy:
+  resources:
+    limits:
+      cpus: "1"
+      memory: 1000M
+user: 'docker_user'
+```
+
+```
+quentin@test:~/Documents/tp2$ docker stats --no-stream
+CONTAINER ID   NAME               CPU %     MEM USAGE / LIMIT    MEM %     NET I/O       BLOCK I/O        PIDS
+f923cf8deb5d   tp2-php_apache-1   0.02%     19.78MiB / 1000MiB   1.98%     3.43kB / 0B   38.5MB / 147kB   7
+13efd8a4cbc8   tp2-phpmyadmin-1   0.00%     22.36MiB / 1000MiB   2.24%     3.68kB / 0B   41.2MB / 528kB   6
+78fe8e1f33a8   tp2-mysql-1        0.88%     351.1MiB / 1000MiB   35.11%    7.48kB / 0B   103MB / 46.5MB   38
+```
 
 # II. Reverse proxy buddy
 
@@ -66,62 +80,66 @@ On va ajouter un reverse proxy dans le mix !
 
 - il doit inclure un quatrième conteneur : un reverse proxy NGINX
   - image officielle !
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ docker pull nginx
+```
+
   - un volume pour ajouter un fichier de conf
-- je vous file une conf minimale juste en dessous
-- c'est le seul conteneur exposé (partage de ports)
-  - il permet d'accéder soit à PHPMyAdmin
-  - soit à votre site
-- vous ajouterez au fichier `hosts` de **votre PC** (le client)
-  - `www.supersite.com` qui pointe vers l'IP de la machine qui héberge les conteneurs
-  - `pma.supersite.com` qui pointe vers la même IP (`pma` pour PHPMyAdmin)
-  - en effet, c'est grâce au nom que vous saisissez que NGINX saura vers quel conteneur vous renvoyer !
-
-> *Tu peux choisir un nom de domaine qui te plaît + on s'en fout, mais pense à bien adapter tous mes exemples par la suite si tu en choisis un autre.*
-
-```nginx
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ cat ./conf/nginx.conf
 server {
     listen       80;
     server_name  www.supersite.com;
-
+   
     location / {
-        proxy_pass   http://nom_du_conteneur_PHP;
+        proxy_pass   http://php_apache;
     }
-}
+}  
 
 server {
     listen       80;
     server_name  pma.supersite.com;
 
     location / {
-        proxy_pass   http://nom_du_conteneur_PMA;
+        proxy_pass   http://phpmyadmin;
     }
 }
+```
+
+```docker
+# Dans docker compose
+nginx:
+    image: nginx:latest
+    ports:
+      - "8092:80"
+    volumes:
+      - ./conf:/etc/nginx/
+    restart: always
+```
+
+- vous ajouterez au fichier `hosts` de **votre PC** (le client)
+  - `www.supersite.com` qui pointe vers l'IP de la machine qui héberge les conteneurs
+  - `pma.supersite.com` qui pointe vers la même IP (`pma` pour PHPMyAdmin)
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ cat /etc/hosts | grep supersite
+172.17.0.1 www.supersite.com
+172.17.0.1 pma.supersite.com
+```
+
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ curl http://www.supersite.com:8090/
+<h1>Site pas ouf</h1>
 ```
 
 ## B. HTTPS auto-signé
 
 🌞 **HTTPS** auto-signé
 
-- générez un certificat et une clé auto-signés
-- adaptez la conf de NGINX pour tout servir en HTTPS
-- la clé et le certificat doivent être montés avec des volumes (`-v`)
-- la commande pour générer une clé et un cert auto-signés :
-
-```bash
-openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -keyout www.supersite.com.key -out www.supersite.com.crt
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2$ openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -keyout www.supersite.com.key -out www.supersite.com.crt
 ```
 
-> Vous pouvez générer deux certificats (un pour chaque sous-domaine) ou un certificat *wildcard* qui est valide pour `*.supersite.com` (genre tous les sous-domaines de `supersite.com`).
-
 ## C. HTTPS avec une CA maison
-
-> **Vous pouvez jeter la clé et le certificat de la partie précédente :D**
-
-On va commencer par générer la clé et le certificat de notre Autorité de Certification (CA). Une fois fait, on pourra s'en servir pour signer d'autres certificats, comme celui de notre serveur web.
-
-Pour que la connexion soit trusted, il suffira alors d'ajouter le certificat de notre CA au magasin de certificats de votre navigateur sur votre PC.
-
-Il vous faudra un shell bash et des commandes usuelles sous la main pour réaliser les opérations. Lancez une VM, ou ptet Git Bash, ou ptet un conteneur debian oneshot ?
 
 🌞 **Générer une clé et un certificat de CA**
 
@@ -148,8 +166,6 @@ $ ls
 
 🌞 **Faire signer notre certificat par la clé de la CA**
 
-- préparez un fichier `v3.ext` qui contient :
-
 ```ext
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
@@ -165,25 +181,23 @@ DNS.2 = www.tp7.secu
 
 ```bash
 $ openssl x509 -req -in www.supersite.com.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out www.supersite.com.crt -days 500 -sha256 -extfile v3.ext
-$ ls
-# www.supersite.com.crt c'est le certificat qu'utilisera le serveur web
 ```
 
 🌞 **Ajustez la configuration NGINX**
 
 - le site web doit être disponible en HTTPS en utilisant votre clé et votre certificat
-- une conf minimale ressemble à ça :
 
 ```nginx
 server {
-    [...]
-    # faut changer le listen
-    listen 10.7.1.103:443 ssl;
+    listen       443 ssl;
+    server_name  www.supersite.com;
 
-    # et ajouter ces deux lignes
-    ssl_certificate /chemin/vers/le/cert/www.supersite.com.crt;
-    ssl_certificate_key /chemin/vers/la/clé/www.supersite.com.key;
-    [...]
+    ssl_certificate /home/quentin/Documents/rendu-tp-linux-b2/tp2/php/www.supersite.com.crt
+    ssl_certificate_key /home/quentin/Documents/rendu-tp-linux-b2/tp2/php/www.supersite.com.key
+
+    location / {
+        proxy_pass   http://php_apache;
+    }
 }
 ```
 
