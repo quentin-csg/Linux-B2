@@ -33,3 +33,11 @@ services:
       - "8081:80"
     depends_on:
       - mysql
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8092:80"
+    volumes:
+      - ./conf:/etc/nginx/
+    restart: always
