@@ -127,9 +127,17 @@ quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ cat /etc/hosts | grep supers
 ```
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ curl http://www.supersite.com:8090/
+quentin@test:~/Documents/rendu-tp-linux-b2/tp2/php$ curl http://www.supersite.com:8080/
 <h1>Site pas ouf</h1>
 ```
+
+```
+quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ curl pma.supersite.com:8081 | grep phpmyadmin
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+<a href="./url.php?url=https%3A%2F%2Fwww.phpmyadmin.net%2F" target="_blank" rel="noopener noreferrer" class="logo">
+```
+
 
 ## B. HTTPS auto-signé
 
