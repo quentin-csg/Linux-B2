@@ -2,18 +2,23 @@ version: '3'
 
 services:
   php_apache:
-    image: php:7.2-apache  # Utilisez le nom de votre image construite
+    image: php:7.2-apache
     ports:
       - "8080:80"
     depends_on:
       - mysql
       - phpmyadmin
     command: sh -c "echo 'phpMyAdmin is ready on http://localhost:8081 (root:root), and a web page on http://localhost:8080' && apache2-foreground"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '1000M'
 
   mysql:
     image: mysql
     volumes:
-      - ./sql/:/docker-entrypoint-initdb.d/initial.sql/
+      - ./sql/:/docker-entrypoint-initdb.d/initial.sql
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: utilisateurs
@@ -21,6 +26,11 @@ services:
       MYSQL_PASSWORD: quentin
     ports:
       - "3306:3306"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '1000M'
 
   phpmyadmin:
     image: phpmyadmin
@@ -32,6 +42,11 @@ services:
       - "8081:80"
     depends_on:
       - mysql
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '1000M'
 
   nginx:
     image: nginx:latest
