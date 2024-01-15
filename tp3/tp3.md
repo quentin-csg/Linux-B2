@@ -38,14 +38,18 @@ IPv6 is enabled\n" || echo -e "\n - IPv6 is not enabled\n"
  -
 IPv6 is enabled
 
-[quentin@tp3-secu ~]$ ./test.sh
+---
+
+[quentin@tp3-secu ~]$ ./audit.sh
 
 - Audit Result:
  ** PASS **
 
  - System has no wireless NICs installed
 
-[quentin@tp3-secu ~]$ ./test.sh
+---
+
+[quentin@tp3-secu ~]$ ./audit.sh
 
 - Audit Result:
  ** PASS **
@@ -53,7 +57,9 @@ IPv6 is enabled
  - Module "tipc" doesn't exist on the
 system
 
-[quentin@tp3-secu ~]$ ./test.sh
+---
+
+[quentin@tp3-secu ~]$ ./audit.sh
 
 - Audit Result:
  ** PASS **
@@ -70,6 +76,8 @@ a kernel parameter configuration file
 in "/etc/sysctl.d/60-netipv6_sysctl.conf"
  - "net.ipv6.conf.all.forwarding" is not set incorectly in
 a kernel parameter configuration file
+
+---
 
 [root@tp3-secu ~]# cat /etc/sysctl.d/60-netipv4_sysctl.conf
 
@@ -117,6 +125,8 @@ net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
 " >> /etc/sysctl.d/60-netipv4_sysctl.conf
 
+---
+
 [root@tp3-secu ~]# {
  sysctl -w net.ipv4.conf.all.accept_redirects=0
  sysctl -w net.ipv4.conf.default.accept_redirects=0
@@ -138,6 +148,7 @@ net.ipv6.conf.all.accept_redirects = 0
 net.ipv6.conf.default.accept_redirects = 0
 net.ipv6.route.flush = 1
 
+---
 
 [root@tp3-secu ~]# printf "
 net.ipv4.conf.all.secure_redirects = 0
@@ -152,6 +163,7 @@ net.ipv4.conf.all.secure_redirects = 0
 net.ipv4.conf.default.secure_redirects = 0
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]#  printf "
 net.ipv4.conf.all.log_martians = 1
@@ -166,6 +178,7 @@ net.ipv4.conf.all.log_martians = 1
 net.ipv4.conf.default.log_martians = 1
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]#  printf "
 net.ipv4.icmp_echo_ignore_broadcasts = 1
@@ -177,6 +190,7 @@ net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]# printf "
 net.ipv4.icmp_ignore_bogus_error_responses = 1
@@ -188,6 +202,7 @@ net.ipv4.icmp_ignore_bogus_error_responses = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]# printf "
 net.ipv4.conf.all.rp_filter = 1
@@ -202,6 +217,7 @@ net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]# printf "
 net.ipv4.tcp_syncookies = 1
@@ -213,6 +229,7 @@ net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_syncookies = 1
 net.ipv4.route.flush = 1
 
+---
 
 [root@tp3-secu ~]# printf "
 net.ipv6.conf.all.accept_ra = 0
@@ -230,8 +247,312 @@ net.ipv6.route.flush = 1
 
 
   - toute la section 5.2 Configure SSH Server
+```
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/ssh/sshd_config
+/etc/ssh/sshd_config 600 0/root 0/root
+
+---
+
+[quentin@tp3-secu ~]$ ./test.sh
+find: ‘/etc/ssh/sshd_config.d’: Permission denied
+
+- Audit Result:
+ *** PASS ***
+
+---
+
+[quentin@tp3-secu ~]$ sudo ./remediation.sh
+ - Checking private key file: "/etc/ssh/ssh_host_ed25519_key.pub"
+ - File: "/etc/ssh/ssh_host_ed25519_key.pub" is owned by: "" changing
+owner to "root"
+ - File: "/etc/ssh/ssh_host_ed25519_key.pub" is owned by group ""
+changing to group "root"
+ - Checking private key file: "/etc/ssh/ssh_host_ecdsa_key.pub"
+ - File: "/etc/ssh/ssh_host_ecdsa_key.pub" is owned by: "" changing
+owner to "root"
+ - File: "/etc/ssh/ssh_host_ecdsa_key.pub" is owned by group ""
+changing to group "root"
+ - Checking private key file: "/etc/ssh/ssh_host_rsa_key.pub"
+ - File: "/etc/ssh/ssh_host_rsa_key.pub" is owned by: "" changing
+owner to "root"
+ - File: "/etc/ssh/ssh_host_rsa_key.pub" is owned by group ""
+changing to group "root"
+
+---
+
+[quentin@tp3-secu ssh]$ sudo grep -Pi '^\h*(allow|deny)(users|groups)\h+\H+(\h+.*)?$' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf
+/etc/ssh/sshd_config:AllowUsers quentin
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep LogLevel
+LogLevel VERBOSE
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*UsePAM\b' /etc/ssh/sshd_config
+UsePAM yes
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*PermitRootLogin\b' /etc/ssh/sshd_config
+PermitRootLogin no
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*HostbasedAuthentication\b' /etc/ssh/sshd_config
+HostbasedAuthentication no
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*PermitEmptyPasswords\b' /etc/ssh/sshd_config
+PermitEmptyPasswords no
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*PermitUserEnvironment\b' /etc/ssh/sshd_config
+PermitUserEnvironment no
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*ignorerhosts\b' /etc/ssh/sshd_config
+IgnoreRhosts yes
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*X11Forwarding\b' /etc/ssh/sshd_config
+X11Forwarding no
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Pi '^\h*AllowTcpForwarding\b' /etc/ssh/sshd_config
+AllowTcpForwarding no
+
+---
+
+[quentin@tp3-secu ~]$ sudo update-crypto-policies --show
+DEFAULT
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep Banner
+Banner /etc/issue.net
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep MaxAuthTries
+MaxAuthTries 4
+
+---
+
+[quentin@tp3-secu ~]$ sudo grep -Ei '^\s*maxstartups\s+(((1[1-9]|[1-9][0-9][0-9]+):([0-9]+):([0-9]+))|(([0-9]+):(3[1-9]|[4-9][0-9]|[1-9][0-9][0-9]+):([0-9]+))|(([0-9]+):([0-9]+):(6[1-9]|[7-9][0-9]|[1-9][0-9][0-9]+)))' /etc/ssh/sshd_config
+MaxStartups 10:30:60
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep MaxSessions
+MaxSessions 10
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep LoginGraceTime
+LoginGraceTime 60
+
+---
+
+[quentin@tp3-secu ~]$ sudo cat /etc/ssh/sshd_config | grep ClientAlive*
+ClientAliveInterval 15
+ClientAliveCountMax 3
+
+```
+
   - au moins 10 points dans la section 6.1 System File Permissions
+```
+6.1.1 Ensure permissions on /etc/passwd are configured
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/passwd
+/etc/passwd 644 0/root 0/root
+
+---
+
+6.1.2 Ensure permissions on /etc/passwd- are configured
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/passwd-
+/etc/passwd- 644 0/root 0/root
+
+---
+
+6.1.3 Ensure permissions on /etc/group are configured
+[quentin@tp3-secu ~]$  stat -Lc "%n %a %u/%U %g/%G" /etc/group
+/etc/group 644 0/root 0/root
+
+---
+
+6.1.4 Ensure permissions on /etc/group- are configured
+[quentin@tp3-secu ~]$  stat -Lc "%n %a %u/%U %g/%G" /etc/group-
+/etc/group- 644 0/root 0/root
+
+---
+
+6.1.5 Ensure permissions on /etc/shadow are configured 
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/shadow
+/etc/shadow 0 0/root 0/root
+
+---
+
+6.1.6 Ensure permissions on /etc/shadow- are configured
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/shadow-
+/etc/shadow- 0 0/root 0/root
+
+---
+
+6.1.7 Ensure permissions on /etc/gshadow are configured
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/gshadow
+/etc/gshadow 0 0/root 0/root
+
+---
+
+6.1.8 Ensure permissions on /etc/gshadow- are configured
+[quentin@tp3-secu ~]$ stat -Lc "%n %a %u/%U %g/%G" /etc/gshadow-
+/etc/gshadow- 0 0/root 0/root
+
+---
+
+6.1.11 Ensure no ungrouped files or directories exist
+[quentin@tp3-secu ~]$ sudo df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -nogroup 2>/dev/n
+ull
+
+---
+
+6.1.13 Audit SUID executables
+[quentin@tp3-secu ~]$ sudo df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -40
+00 2>/dev/null
+/usr/bin/chage
+/usr/bin/gpasswd
+/usr/bin/newgrp
+/usr/bin/su
+/usr/bin/mount
+/usr/bin/umount
+/usr/bin/crontab
+/usr/bin/passwd
+/usr/bin/sudo
+/usr/sbin/pam_timestamp_check
+/usr/sbin/unix_chkpwd
+/usr/sbin/grub2-set-bootflag
+
+---
+
+6.1.14 Audit SGID executables
+[quentin@tp3-secu ~]$ sudo df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -20
+00 2>/dev/null
+/usr/bin/write
+/usr/libexec/utempter/utempter
+/usr/libexec/openssh/ssh-keysign
+
+```
+
   - au moins 10 points ailleur sur un truc que vous trouvez utile
+```
+1.6.1.1 Ensure SELinux is installed
+[quentin@tp3-secu ~]$ rpm -q libselinux
+libselinux-3.5-1.el9.x86_64
+
+---
+
+1.1.1.1 Ensure mounting of squashfs filesystems is disabled
+[quentin@tp3-secu ~]$ ./audit.sh
+
+- Audit Result:
+ ** PASS **
+
+ - Module "squashfs" doesn't exist on the
+system
+
+---
+
+1.3.1 Ensure AIDE is installed
+[quentin@tp3-secu ~]$ sudo aide --init
+Start timestamp: 2024-01-15 22:45:39 +0100 (AIDE 0.16)
+AIDE initialized database at /var/lib/aide/aide.db.new.gz
+
+Number of entries:      33210
+
+---------------------------------------------------
+The attributes of the (uncompressed) database(s):
+---------------------------------------------------
+
+/var/lib/aide/aide.db.new.gz
+  MD5      : U4PNg58VrBhUX0ddLUNhcA==
+  SHA1     : oSTMeoYubVoDKuyAGhHy2OnmkPo=
+  RMD160   : gAR4MXR+B23oyUvTetpBPlH3YXA=
+  TIGER    : Rpz86bMLNTVFCWLs9SnmbL15dvCu83O/
+  SHA256   : Vh6zWNll+6sUoju/r91Jmv4tFKHZiUyG
+             dAvg/6poPVA=
+  SHA512   : LlltB8OA+cfX4XoO/fjY5KFq4WbSKXkd
+             sosGxi9doLobTzUvvFgh3CWPsYhn3j6I
+             nE7WMyqPmC56FpOrHpY4Mg==
+
+
+End timestamp: 2024-01-15 22:46:42 +0100 (run time: 1m 3s)
+[quentin@tp3-secu ~]$ rpm -q aide
+aide-0.16-100.el9.x86_64
+
+---
+
+1.4.1 Ensure bootloader password is set
+[quentin@tp3-secu ~]$ sudo awk -F. '/^\s*GRUB2_PASSWORD/ {print $1"."$2"."$3}' /boot/grub2/user.cfg
+GRUB2_PASSWORD=grub.pbkdf2.sha512
+
+---
+
+1.4.2 Ensure permissions on bootloader config are configured
+[quentin@tp3-secu ~]$ sudo stat -Lc "%n %#a %u/%U %g/%G" /boot/grub2/grub.cfg
+/boot/grub2/grub.cfg 0700 0/root 0/root
+[quentin@tp3-secu ~]$ sudo stat -Lc "%n %#a %u/%U %g/%G" /boot/grub2/grubenv
+/boot/grub2/grubenv 0600 0/root 0/root
+[quentin@tp3-secu ~]$ sudo stat -Lc "%n %#a %u/%U %g/%G" /boot/grub2/user.cfg
+/boot/grub2/user.cfg 0600 0/root 0/root
+
+---
+
+1.5.1 Ensure core dump storage is disabled
+[quentin@tp3-secu ~]$ sudo grep -i '^\s*storage\s*=\s*none' /etc/systemd/coredump.conf
+Storage=none
+
+---
+
+1.6.1.1 Ensure SELinux is installed
+[quentin@tp3-secu ~]$ rpm -q libselinux
+libselinux-3.5-1.el9.x86_64
+
+---
+
+2.3 Ensure telnet client, LDAP client, TFTP client and FTP client are not installed
+[quentin@tp3-secu ~]$ rpm -q telnet
+package telnet is not installed
+[quentin@tp3-secu ~]$ rpm -q openldap-clients
+package openldap-clients is not installed
+[quentin@tp3-secu ~]$ rpm -q tftp
+package tftp is not installed
+[quentin@tp3-secu ~]$ rpm -q ftp
+package ftp is not installed
+
+---
+
+6.2.8 Ensure root PATH Integrity
+[quentin@tp3-secu ~]$ ./audit.sh
+/root/.local/bin is not a directory
+/root/bin is not a directory
+
+---
+
+6.2.9 Ensure root is the only UID 0 account 
+[quentin@tp3-secu ~]$ sudo awk -F: '($3 == 0) { print $1 }' /etc/passwd
+root
+
+6.2.1 Ensure accounts in /etc/passwd use shadowed passwords
+[quentin@tp3-secu ~]$ sudo awk -F: '($2 != "x" ) { print $1 " is not set to shadowed passwords "}' /etc/passwd
+
+```
+
 
 ## 2. Conf SSH
 
