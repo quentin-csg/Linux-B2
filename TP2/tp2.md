@@ -61,7 +61,7 @@ user: 'docker_user'
 ```
 
 ```
-quentin@test:~/Documents/tp2$ docker stats --no-stream
+quentin@tp2:~/Documents/tp2$ docker stats --no-stream
 CONTAINER ID   NAME               CPU %     MEM USAGE / LIMIT    MEM %     NET I/O       BLOCK I/O        PIDS
 f923cf8deb5d   tp2-php_apache-1   0.02%     19.78MiB / 1000MiB   1.98%     3.43kB / 0B   38.5MB / 147kB   7
 13efd8a4cbc8   tp2-phpmyadmin-1   0.00%     22.36MiB / 1000MiB   2.24%     3.68kB / 0B   41.2MB / 528kB   6
@@ -81,12 +81,12 @@ On va ajouter un reverse proxy dans le mix !
 - il doit inclure un quatrième conteneur : un reverse proxy NGINX
   - image officielle !
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ docker pull nginx
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ docker pull nginx
 ```
 
   - un volume pour ajouter un fichier de conf
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ cat ./conf/nginx.conf
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ cat ./conf/nginx.conf
 server {
     listen       80;
     server_name  www.supersite.com;
@@ -121,18 +121,18 @@ nginx:
   - `www.supersite.com` qui pointe vers l'IP de la machine qui héberge les conteneurs
   - `pma.supersite.com` qui pointe vers la même IP (`pma` pour PHPMyAdmin)
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ cat /etc/hosts | grep supersite
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ cat /etc/hosts | grep supersite
 172.17.0.1 www.supersite.com
 172.17.0.1 pma.supersite.com
 ```
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ curl http://www.supersite.com:8080/
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ curl http://www.supersite.com:8080/
 <h1>Site pas ouf</h1>
 ```
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ curl pma.supersite.com:8081 | grep phpmyadmin
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ curl pma.supersite.com:8081 | grep phpmyadmin
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 <a href="./url.php?url=https%3A%2F%2Fwww.phpmyadmin.net%2F" target="_blank" rel="noopener noreferrer" class="logo">
@@ -144,7 +144,7 @@ quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php$ curl pma.supersite.com:8081 
 🌞 **HTTPS** auto-signé
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/tp2$ openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -keyout www.supersite.com.key -out www.supersite.com.crt
+quentin@tp2:~/Documents/rendu-tp-linux-b2/tp2$ openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -keyout www.supersite.com.key -out www.supersite.com.crt
 ```
 
 ## C. HTTPS avec une CA maison
@@ -152,11 +152,11 @@ quentin@test:~/Documents/rendu-tp-linux-b2/tp2$ openssl req -new -newkey rsa:409
 🌞 **Générer une clé et un certificat de CA**
 
 ```bash
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl genrsa -des3 -out CA.key 4096
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ openssl genrsa -des3 -out CA.key 4096
 
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -x509 -new -nodes -key CA.key -sha256 -days 1024  -out CA.pem
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -x509 -new -nodes -key CA.key -sha256 -days 1024  -out CA.pem
 
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ ls
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ ls
 CA.key  CA.pem  php  tp2.md  www.supersite.com.crt  www.supersite.com.key
 ```
 
@@ -165,18 +165,18 @@ Il est temps de générer une clé et un certificat que notre serveur web pourra
 🌞 **Générer une clé et une demande de signature de certificat pour notre serveur web**
 
 ```bash
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -new -nodes -out www.supersite.com.csr -newkey rsa:4096 -keyout www.supersite.com.key
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ openssl req -new -nodes -out www.supersite.com.csr -newkey rsa:4096 -keyout www.supersite.com.key
 
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ ls www*
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ ls www*
 www.supersite.com.crt  www.supersite.com.csr  www.supersite.com.key
 ```
 
 🌞 **Faire signer notre certificat par la clé de la CA**
 
 ```shell
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ cat v3.ext 
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ cat v3.ext 
 authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:TRUE
+basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 subjectAltName = @alt_names
 
@@ -187,7 +187,7 @@ DNS.1 = www.supersite.com
 - effectuer la demande de signature pour récup un certificat signé par votre CA :
 
 ```bash
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2$ openssl x509 -req -in www.supersite.com.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out www.supersite.com.crt -days 500 -sha256 -extfile v3.ext
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2$ openssl x509 -req -in www.supersite.com.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out www.supersite.com.crt -days 500 -sha256 -extfile v3.ext
 Signature ok
 subject=C = AU, ST = Some-State, O = Internet Widgits Pty Ltd
 Getting CA Private Key
@@ -197,18 +197,17 @@ Enter pass phrase for CA.key:
 🌞 **Ajustez la configuration NGINX**
 
 ```
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' php-php_apache-1
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' php-php_apache-1
 172.22.0.5
 ```
-
 
 - le site web doit être disponible en HTTPS en utilisant votre clé et votre certificat
 
 ```shell
-quentin@test:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ cat nginx.conf 
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php/conf$ cat nginx.conf 
 server {
     server_name  www.supersite.com;
-    listen       172.22.0.5:443 ssl;
+    listen       443 ssl;
 
     ssl_certificate /home/quentin/Documents/rendu-tp-linux-b2/TP2/www.supersite.com.crt
     ssl_certificate_key /home/quentin/Documents/rendu-tp-linux-b2/TP2/www.supersite.com.key
@@ -222,15 +221,8 @@ server {
 
 🌞 **Prouvez avec un `curl` que vous accédez au site web**
 
-- depuis votre PC
 - avec un `curl -k` car il ne reconnaît pas le certificat là
 ```
-
+quentin@tp2:~/Documents/rendu-tp-linux-b2/TP2/php$ curl -k https://www.supersite.com:8080/
+<h1>Site pas ouf</h1>
 ```
-
-🌞 **Ajouter le certificat de la CA dans votre navigateur**
-
-- vous pourrez ensuite visitez `https://web.tp7.b2` sans alerte de sécurité, et avec un cadenas vert
-- il est nécessaire de joindre le site avec son nom pour que HTTPS fonctionne (fichier `hosts`)
-
-> *En entreprise, c'est comme ça qu'on fait pour qu'un certificat de CA non-public soit trusted par tout le monde : on dépose le certificat de CA dans le navigateur (et l'OS) de tous les PCs. Evidemment, on utilise une technique de déploiement automatisé aussi dans la vraie vie, on l'ajoute pas à la main partout hehe.*
