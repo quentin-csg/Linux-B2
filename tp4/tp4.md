@@ -1,7 +1,5 @@
 # TP4 : Hardening Script
 
-Le but de ce TP va être de **proposer un script qui permet de "durcir" une machine Linux.**
-
 ## Sommaire
 
 - [TP4 : Hardening Script](#tp4--hardening-script)
@@ -18,28 +16,37 @@ Le but de ce TP va être de **proposer un script qui permet de "durcir" une mach
 
 🌞 **Setup `web.tp5.b2`**
 
-- installation de NGINX
 - préparation du site web
-  - création d'un dossier `/var/www/app_nulle/` : la racine web (le dossier qui contient le site web)
-  - création d'un fichier `/var/www/app_nulle/index.html` avec le contenu de votre choix
   - choisissez des permissions adéquates pour le dossier et le fichier
+```
+[quentin@web ~]$ sudo chown -R nginx:nginx /var/www/app_nulle
+```
+
 - ajouter un fichier de conf NGINX dans `/etc/nginx/conf.d/` pour servir le dossier `/var/www/app_nulle/` sur le port 80
-- ouvrir le port 80 dans le firewall
-- démarrer le service
+```
+server {
+        listen 80;
+        listen [::]:80;
+
+        root /var/www/app_nulle;
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name app.tp4.b2;
+
+        location / {
+                index index.html;
+        }
+}
+```
 
 🌞 **Setup `rp.tp5.b2`**
 
-- installation de NGINX
 - ajouter un fichier de conf NGINX dans `/etc/nginx/conf.d/` pour proxy vers `http://10.5.1.12`
-- ouvrir le port 80 dans le firewall
-- démarrer le service
-
-Un fichier de conf pour agir comme un reverse proxy, ça ressemble à :
 
 ```nginx
 server {
     listen    80;
-    server_name   app.tp5.b2;
+    server_name   app.tp4.b2;
 
     location / {
         proxy_pass http://10.5.1.12;
@@ -47,7 +54,30 @@ server {
 }
 ```
 
-> Pour faire clean, vous pouvez ajouter `app.tp5.b2` au fichier `hosts` de votre PC, et faire pointer ce nom vers `10.5.1.11`. Vous pouvez alors accéder à l'application avec `http://app.tp5.b2`.
+```
+PS C:\Users\quentin1> curl http://app.tp4.b2                                                                                
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : <h1>Site nul</h1>
+
+RawContent        : HTTP/1.1 200 OK
+                    Connection: keep-alive
+                    Accept-Ranges: bytes
+                    Content-Length: 18
+                    Content-Type: text/html
+                    Date: Fri, 19 Jan 2024 09:58:14 GMT
+                    ETag: "65aa39f9-12"
+                    Last-Modified: Fri, 19 Jan 2024 08...
+Forms             : {}
+Headers           : {[Connection, keep-alive], [Accept-Ranges, bytes], [Content-Length, 18], [Content-Type, text/html]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 18
+```
+
 
 🌞 **HTTPS `rp.tp5.b2`**
 
@@ -74,7 +104,10 @@ server {
 }
 ```
 
-> Je rappelle qu'il existe un endroit standard pour stocker les clés et les certificats d'une machine Rocky Linux (commun à tous les OS RedHat) : `/etc/pki/tls/private` pour les clés et `/etc/pki/tls/certs` pour les certificats.
+```
+[quentin@debian ~]$ curl -k https://10.5.1.11
+<h1>Site nul</h1>
+```
 
 # II. Hardening script
 

@@ -589,35 +589,69 @@ echo "publicKey" >> ~/.ssh/authorized_keys #vm
 
 ## 4. DoT
 
-Ca commence à faire quelques années maintenant que plusieurs acteurs poussent pour qu'on fasse du DNS chiffré, et qu'on arrête d'envoyer des requêtes DNS en clair dans tous les sens.
-
-Le Dot est une techno qui va dans ce sens : DoT pour DNS over TLS. On fait nos requêtes DNS dans des tunnels chiffrés avec le protocole TLS.
-
 🌞 **Configurer la machine pour qu'elle fasse du DoT**
 
-- installez `systemd-networkd` sur la machine pour ça
+- installez `systemd-resolved` sur la machine pour ça
+```
+[quentin@tp3-secu ~]$ sudo systemctl status systemd-resolved | head -n 3
+● systemd-resolved.service - Network Name Resolution
+     Loaded: loaded (/usr/lib/systemd/system/systemd-resolved.service; enabled; preset: disabled)
+     Active: active (running) since Thu 2024-01-18 15:47:02 CET; 1min 7s ago
+```
+
 - activez aussi DNSSEC tant qu'on y est
-- référez-vous à cette doc qui est cool par exemple
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/systemd/resolved.conf | grep DNSSEC
+DNSSEC=true
+```
+
+- [référez-vous à cette doc qui est cool par exemple](https://wiki.archlinux.org/title/systemd-resolved)
 - utilisez le serveur public de CloudFlare : 1.1.1.1 (il supporte le DoT)
+
 
 🌞 **Prouvez que les requêtes DNS effectuées par la machine...**
 
-- ont une réponse qui provient du serveur que vous avez conf (normalement c'est `127.0.0.1` avec `systemd-networkd` qui tourne)
-  - quand on fait un `dig ynov.com` on voit en bas quel serveur a répondu
-- mais qu'en réalité, la requête a été forward vers 1.1.1.1 avec du TLS
-  - je veux une capture Wireshark à l'appui !
+```
+[quentin@tp3-secu ~]$ dig ynov.com
+
+; <<>> DiG 9.16.23-RH <<>> ynov.com
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46524
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;ynov.com.                      IN      A
+
+;; ANSWER SECTION:
+ynov.com.               214     IN      A       104.26.11.233
+ynov.com.               214     IN      A       172.67.74.226
+ynov.com.               214     IN      A       104.26.10.233
+
+;; Query time: 13 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1)
+;; WHEN: Thu Jan 18 16:15:37 CET 2024
+;; MSG SIZE  rcvd: 85
+
+[quentin@tp3-secu ~]$ sudo tcpdump -i enp0s3 src 1.1.1.1
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+16:15:37.456872 IP one.one.one.one.domain > tp3-secu.33446: 46524 3/0/1 A 104.26.11.233, A 172.67.74.226, A 104.26.10.233 (85)
+16:15:37.538510 IP one.one.one.one.domain > tp3-secu.51770: 8749 NXDomain 0/0/0 (40)
+16:15:37.551466 IP one.one.one.one.domain > tp3-secu.44246: 15180 1/0/0 PTR one.one.one.one. (67)
+^C
+3 packets captured
+3 packets received by filter
+0 packets dropped by kernel
+```
 
 ## 5. AIDE
 
-Un truc demandé au point 1.3.1 du guide CIS c'est d'installer AIDE.
-
-AIDE est un IDS ou *Intrusion Detection System*. Les IDS c'est un type de programme dont les fonctions peuvent être multiples.
-
-Dans notre cas, AIDE, il surveille que certains fichiers du disque n'ont pas été modifiés. Des fichiers comme `/etc/shadow` par exemple.
-
 🌞 **Installer et configurer AIDE**
 
-- et bah incroyable mais [une très bonne ressource ici](https://www.it-connect.fr/aide-utilisation-et-configuration-dune-solution-de-controle-dintegrite-sous-linux/)
 - configurez AIDE pour qu'il surveille (fichier de conf en compte-rendu)
   - le fichier de conf du serveur SSH
   - le fichier de conf du client chrony (le service qui gère le temps)
