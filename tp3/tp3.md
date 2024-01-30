@@ -605,9 +605,9 @@ echo "publicKey" >> ~/.ssh/authorized_keys #vm
 DNSSEC=true
 ```
 
-- [référez-vous à cette doc qui est cool par exemple](https://wiki.archlinux.org/title/systemd-resolved)
-- utilisez le serveur public de CloudFlare : 1.1.1.1 (il supporte le DoT)
-
+```
+sudo ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+```
 
 🌞 **Prouvez que les requêtes DNS effectuées par la machine...**
 
@@ -654,20 +654,251 @@ listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 
 - configurez AIDE pour qu'il surveille (fichier de conf en compte-rendu)
   - le fichier de conf du serveur SSH
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/aide.conf | grep ssh
+# ssh
+/etc/ssh/sshd_config$ CONTENT_EX
+/etc/ssh/ssh_config$ CONTENT_EX
+```
   - le fichier de conf du client chrony (le service qui gère le temps)
-  - le fichier de conf de `systemd-networkd`
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/aide.conf | grep chrony
+/etc/chrony.conf$ CONTENT_EX
+/etc/chrony.keys$ CONTENT_EX
+```
+  - le fichier de conf de `systemd-resolved`
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/aide.conf | grep reso*
+/etc/resolv.conf$ DATAONLY
+/etc/systemd/resolved.conf CONTENT_EX
+/etc/resolv.conf CONTENT_EX
+```
 
 🌞 **Scénario de modification**
 
 - introduisez une modification dans le fichier de conf du serveur SSH
 - montrez que AIDE peut la détecter
+```
+[quentin@tp3-secu ~]$ sudo aide --check
+Start timestamp: 2024-01-19 12:35:15 +0100 (AIDE 0.16)
+AIDE found differences between database and filesystem!!
+
+Summary:
+  Total number of entries:      33376
+  Added entries:                0
+  Removed entries:              0
+  Changed entries:              1
+
+---------------------------------------------------
+Changed entries:
+---------------------------------------------------
+
+f   ...    .C... : /etc/ssh/sshd_config
+
+---------------------------------------------------
+Detailed information about changes:
+---------------------------------------------------
+
+File: /etc/ssh/sshd_config
+  SHA512   : 0GW46NzfLxBQtAu3Lp7QjdROxWMDKYxg | 5XFsnFs+nzW4RrF9orCi22wUKMjYQaVk
+             5CF8907j0UlZv0AXNymYhgQpeNY2SFHu | 44x8Qos76m01jLa3ezB0xZv2DoCu5A8t
+             UjsDVHXYTcPC3ho0Mhl9Lw==         | Ug+9GBrNkfHsNy1r7uZHvA==
+
+
+---------------------------------------------------
+The attributes of the (uncompressed) database(s):
+---------------------------------------------------
+
+/var/lib/aide/aide.db.gz
+  MD5      : 7XCrtfw3g2kHFTyVfZF5zA==
+  SHA1     : BBlXboorbT+nq792Qs9pBSprA1E=
+  RMD160   : LaTWuwThTdTmxNFRPa0YkJBQZrY=
+  TIGER    : y9cRqUx+mgU6bruzlkzWT2l8Y/+ISa8w
+  SHA256   : Lr928ly9Vu11z1teghD/eqPuDPD8YQaj
+             V/nUsgQ7hbA=
+  SHA512   : B7PWflNcfJvHVni4Uksyu0fdbtrgBArc
+             0P1oS3kcP13zIljOBsWVL87UONG3mGIs
+             KZSW2ZZio5Ln8GnHGt4Ahw==
+
+
+End timestamp: 2024-01-19 12:35:22 +0100 (run time: 0m 7s)
+```
 
 🌞 **Timer et service systemd**
 
 - créez un service systemd qui exécute un check AIDE
   - il faut créer un fichier `.service` dans le dossier `/etc/systemd/system/`
-  - contenu du fichier à montrer dans le compte rendu
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/systemd/system/aide.service
+[Unit]
+Description=Aide Check Service
+
+[Service]
+ExecStart=/home/quentin/check.sh
+
+[Install]
+WantedBy=default.target
+```
+
 - créez un timer systemd qui exécute un check AIDE toutes les 10 minutes
   - il faut créer un fichier `.timer` dans le dossier `/etc/systemd/system/`
-  - il doit porter le même nom que le service, genre `aide.service` et `aide.timer`
-  - c'est complètement irréaliste 10 minutes, mais ça vous permettra de faire des tests (vous pouvez même raccourcir encore)
+```
+[quentin@tp3-secu ~]$ sudo cat /etc/systemd/system/aide.timer
+[Unit]
+Description=Aide Check Timer
+
+[Timer]
+OnUnitActiveSec=60s
+Unit=aide.service
+
+[Install]
+WantedBy=timers.target
+```
+
+
+```
+[quentin@tp3-secu ~]$ sudo journalctl -u test.service -f
+Jan 19 14:52:21 tp3-secu check.sh[2620]:   TIGER    : y9cRqUx+mgU6bruzlkzWT2l8Y/+ISa8w
+Jan 19 14:52:21 tp3-secu check.sh[2620]:   SHA256   : Lr928ly9Vu11z1teghD/eqPuDPD8YQaj
+Jan 19 14:52:21 tp3-secu check.sh[2620]:              V/nUsgQ7hbA=
+Jan 19 14:52:21 tp3-secu check.sh[2620]:   SHA512   : B7PWflNcfJvHVni4Uksyu0fdbtrgBArc
+Jan 19 14:52:21 tp3-secu check.sh[2620]:              0P1oS3kcP13zIljOBsWVL87UONG3mGIs
+Jan 19 14:52:21 tp3-secu check.sh[2620]:              KZSW2ZZio5Ln8GnHGt4Ahw==
+Jan 19 14:52:21 tp3-secu check.sh[2620]: End timestamp: 2024-01-19 14:52:21 +0100 (run time: 0m 10s)
+Jan 19 14:52:21 tp3-secu systemd[1]: test.service: Main process exited, code=exited, status=5/NOTINSTALLED
+Jan 19 14:52:21 tp3-secu systemd[1]: test.service: Failed with result 'exit-code'.
+Jan 19 14:52:21 tp3-secu systemd[1]: test.service: Consumed 6.492s CPU time.
+Jan 19 14:53:25 tp3-secu systemd[1]: Started Aide Check Service.
+Jan 19 14:53:26 tp3-secu check.sh[2668]: File /var/log/aide/aide.log is locked by another process.
+Jan 19 14:53:26 tp3-secu check.sh[2668]: Cannot open /var/log/aide/aide.log for writing
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Start timestamp: 2024-01-19 14:53:26 +0100 (AIDE 0.16)
+Jan 19 14:53:39 tp3-secu check.sh[2668]: AIDE found differences between database and filesystem!!
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Summary:
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   Total number of entries:        33385
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   Added entries:                9
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   Removed entries:                0
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   Changed entries:                5
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Added entries:
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f++++++++++++++++: /etc/systemd/system/aide.service
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f++++++++++++++++: /etc/systemd/system/aide.timer
+Jan 19 14:53:39 tp3-secu check.sh[2668]: d++++++++++++++++: /etc/systemd/system/default.target.wants
+Jan 19 14:53:39 tp3-secu check.sh[2668]: l++++++++++++++++: /etc/systemd/system/default.target.wants/aide.service
+Jan 19 14:53:39 tp3-secu check.sh[2668]: l++++++++++++++++: /etc/systemd/system/default.target.wants/aide.timer
+Jan 19 14:53:39 tp3-secu check.sh[2668]: l++++++++++++++++: /etc/systemd/system/default.target.wants/test.service
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f++++++++++++++++: /etc/systemd/system/test.service
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f++++++++++++++++: /etc/systemd/system/test.timer
+Jan 19 14:53:39 tp3-secu check.sh[2668]: l++++++++++++++++: /etc/systemd/system/timers.target.wants/test.timer
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Changed entries:
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f   ...    .C... : /etc/firewalld/zones/public.xml
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f   ...    .C... : /etc/firewalld/zones/public.xml.old
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f   ...    .C... : /etc/ssh/sshd_config
+Jan 19 14:53:39 tp3-secu check.sh[2668]: f   ...    ....S : /etc/sudoers
+Jan 19 14:53:39 tp3-secu check.sh[2668]: d   ...    n ... : /etc/systemd/system
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Detailed information about changes:
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: File: /etc/firewalld/zones/public.xml
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA512   : ExqOlJxabjl7NnEh3pNbCTI0wpXwD6Aa | 4t5Xq53xzrZ1XRmOmPU5yU4uRuJ44NzW
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              og9MNMEdsyfEFrS2/IjVLXYJkD+0Kt7C | 8K62ODMoF6gLFlngX9Txb/2/SzcnPNYw
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              HbX4CFGvfRD1tg4vYYy6rw==         | 4ZEy6viPvNMboIq/RBj0cQ==
+Jan 19 14:53:39 tp3-secu check.sh[2668]: File: /etc/firewalld/zones/public.xml.old
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA512   : 2ia3I+8+Av8NZp12SOf5nvABfeBwmYww | ExqOlJxabjl7NnEh3pNbCTI0wpXwD6Aa
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              t4vrll+LQe4RSmm5cnm+ft2RSnvxSVEE | og9MNMEdsyfEFrS2/IjVLXYJkD+0Kt7C
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              hAcIXdeAPnZ0ibX+dAnXgg==         | HbX4CFGvfRD1tg4vYYy6rw==
+Jan 19 14:53:39 tp3-secu check.sh[2668]: File: /etc/ssh/sshd_config
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA512   : 0GW46NzfLxBQtAu3Lp7QjdROxWMDKYxg | 5XFsnFs+nzW4RrF9orCi22wUKMjYQaVk
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              5CF8907j0UlZv0AXNymYhgQpeNY2SFHu | 44x8Qos76m01jLa3ezB0xZv2DoCu5A8t
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              UjsDVHXYTcPC3ho0Mhl9Lw==         | Ug+9GBrNkfHsNy1r7uZHvA==
+Jan 19 14:53:39 tp3-secu check.sh[2668]: File: /etc/sudoers
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SELinux  : system_u:object_r:etc_t:s0       | unconfined_u:object_r:etc_t:s0
+Jan 19 14:53:39 tp3-secu check.sh[2668]: Directory: /etc/systemd/system
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   Linkcount: 9                                | 10
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: The attributes of the (uncompressed) database(s):
+Jan 19 14:53:39 tp3-secu check.sh[2668]: ---------------------------------------------------
+Jan 19 14:53:39 tp3-secu check.sh[2668]: /var/lib/aide/aide.db.gz
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   MD5      : 7XCrtfw3g2kHFTyVfZF5zA==
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA1     : BBlXboorbT+nq792Qs9pBSprA1E=
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   RMD160   : LaTWuwThTdTmxNFRPa0YkJBQZrY=
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   TIGER    : y9cRqUx+mgU6bruzlkzWT2l8Y/+ISa8w
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA256   : Lr928ly9Vu11z1teghD/eqPuDPD8YQaj
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              V/nUsgQ7hbA=
+Jan 19 14:53:39 tp3-secu check.sh[2668]:   SHA512   : B7PWflNcfJvHVni4Uksyu0fdbtrgBArc
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              0P1oS3kcP13zIljOBsWVL87UONG3mGIs
+Jan 19 14:53:39 tp3-secu check.sh[2668]:              KZSW2ZZio5Ln8GnHGt4Ahw==
+Jan 19 14:53:39 tp3-secu check.sh[2668]: End timestamp: 2024-01-19 14:53:39 +0100 (run time: 0m 13s)
+Jan 19 14:53:39 tp3-secu systemd[1]: test.service: Main process exited, code=exited, status=5/NOTINSTALLED
+Jan 19 14:53:39 tp3-secu systemd[1]: test.service: Failed with result 'exit-code'.
+Jan 19 14:53:39 tp3-secu systemd[1]: test.service: Consumed 6.517s CPU time.
+Jan 19 14:55:04 tp3-secu systemd[1]: Started Aide Check Service.
+Jan 19 14:55:04 tp3-secu check.sh[2678]: File /var/log/aide/aide.log is locked by another process.
+Jan 19 14:55:04 tp3-secu check.sh[2678]: Cannot open /var/log/aide/aide.log for writing
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Start timestamp: 2024-01-19 14:55:04 +0100 (AIDE 0.16)
+Jan 19 14:55:17 tp3-secu check.sh[2678]: AIDE found differences between database and filesystem!!
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Summary:
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   Total number of entries:        33385
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   Added entries:                9
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   Removed entries:                0
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   Changed entries:                5
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Added entries:
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f++++++++++++++++: /etc/systemd/system/aide.service
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f++++++++++++++++: /etc/systemd/system/aide.timer
+Jan 19 14:55:17 tp3-secu check.sh[2678]: d++++++++++++++++: /etc/systemd/system/default.target.wants
+Jan 19 14:55:17 tp3-secu check.sh[2678]: l++++++++++++++++: /etc/systemd/system/default.target.wants/aide.service
+Jan 19 14:55:17 tp3-secu check.sh[2678]: l++++++++++++++++: /etc/systemd/system/default.target.wants/aide.timer
+Jan 19 14:55:17 tp3-secu check.sh[2678]: l++++++++++++++++: /etc/systemd/system/default.target.wants/test.service
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f++++++++++++++++: /etc/systemd/system/test.service
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f++++++++++++++++: /etc/systemd/system/test.timer
+Jan 19 14:55:17 tp3-secu check.sh[2678]: l++++++++++++++++: /etc/systemd/system/timers.target.wants/test.timer
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Changed entries:
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f   ...    .C... : /etc/firewalld/zones/public.xml
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f   ...    .C... : /etc/firewalld/zones/public.xml.old
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f   ...    .C... : /etc/ssh/sshd_config
+Jan 19 14:55:17 tp3-secu check.sh[2678]: f   ...    ....S : /etc/sudoers
+Jan 19 14:55:17 tp3-secu check.sh[2678]: d   ...    n ... : /etc/systemd/system
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Detailed information about changes:
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: File: /etc/firewalld/zones/public.xml
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA512   : ExqOlJxabjl7NnEh3pNbCTI0wpXwD6Aa | 4t5Xq53xzrZ1XRmOmPU5yU4uRuJ44NzW
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              og9MNMEdsyfEFrS2/IjVLXYJkD+0Kt7C | 8K62ODMoF6gLFlngX9Txb/2/SzcnPNYw
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              HbX4CFGvfRD1tg4vYYy6rw==         | 4ZEy6viPvNMboIq/RBj0cQ==
+Jan 19 14:55:17 tp3-secu check.sh[2678]: File: /etc/firewalld/zones/public.xml.old
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA512   : 2ia3I+8+Av8NZp12SOf5nvABfeBwmYww | ExqOlJxabjl7NnEh3pNbCTI0wpXwD6Aa
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              t4vrll+LQe4RSmm5cnm+ft2RSnvxSVEE | og9MNMEdsyfEFrS2/IjVLXYJkD+0Kt7C
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              hAcIXdeAPnZ0ibX+dAnXgg==         | HbX4CFGvfRD1tg4vYYy6rw==
+Jan 19 14:55:17 tp3-secu check.sh[2678]: File: /etc/ssh/sshd_config
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA512   : 0GW46NzfLxBQtAu3Lp7QjdROxWMDKYxg | 5XFsnFs+nzW4RrF9orCi22wUKMjYQaVk
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              5CF8907j0UlZv0AXNymYhgQpeNY2SFHu | 44x8Qos76m01jLa3ezB0xZv2DoCu5A8t
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              UjsDVHXYTcPC3ho0Mhl9Lw==         | Ug+9GBrNkfHsNy1r7uZHvA==
+Jan 19 14:55:17 tp3-secu check.sh[2678]: File: /etc/sudoers
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SELinux  : system_u:object_r:etc_t:s0       | unconfined_u:object_r:etc_t:s0
+Jan 19 14:55:17 tp3-secu check.sh[2678]: Directory: /etc/systemd/system
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   Linkcount: 9                                | 10
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: The attributes of the (uncompressed) database(s):
+Jan 19 14:55:17 tp3-secu check.sh[2678]: ---------------------------------------------------
+Jan 19 14:55:17 tp3-secu check.sh[2678]: /var/lib/aide/aide.db.gz
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   MD5      : 7XCrtfw3g2kHFTyVfZF5zA==
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA1     : BBlXboorbT+nq792Qs9pBSprA1E=
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   RMD160   : LaTWuwThTdTmxNFRPa0YkJBQZrY=
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   TIGER    : y9cRqUx+mgU6bruzlkzWT2l8Y/+ISa8w
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA256   : Lr928ly9Vu11z1teghD/eqPuDPD8YQaj
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              V/nUsgQ7hbA=
+Jan 19 14:55:17 tp3-secu check.sh[2678]:   SHA512   : B7PWflNcfJvHVni4Uksyu0fdbtrgBArc
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              0P1oS3kcP13zIljOBsWVL87UONG3mGIs
+Jan 19 14:55:17 tp3-secu check.sh[2678]:              KZSW2ZZio5Ln8GnHGt4Ahw==
+Jan 19 14:55:17 tp3-secu check.sh[2678]: End timestamp: 2024-01-19 14:55:17 +0100 (run time: 0m 13s)
+Jan 19 14:55:17 tp3-secu systemd[1]: test.service: Main process exited, code=exited, status=5/NOTINSTALLED
+Jan 19 14:55:17 tp3-secu systemd[1]: test.service: Failed with result 'exit-code'.
+Jan 19 14:55:17 tp3-secu systemd[1]: test.service: Consumed 6.131s CPU time.
+^C
+```
