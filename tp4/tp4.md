@@ -111,28 +111,11 @@ server {
 
 # II. Hardening script
 
-Dans cette section, le coeur du sujet, vous allez développer un script `bash` qui permet de renforcer la sécurité de ces deux machines.
+```
+Mettre script code.sh dans le home directory et créer un dossier conf avec les 3 fichiers de configuration présents sur le répo puis modifier le script en exécutable et le lancer avec un utilisateur ayant les droits sudo
+```
 
-➜ **Votre script doit permettre de :**
-
-- **configurer l'OS**
-  - tout ce qui va être relatif au kernel
-  - et tous les services basiques du système, comme la gestion de l'heure
-  - éventuellement de la conf systemd, sudo, etc.
-- **configurer l'accès à distance**
-  - on pose une conf SSH robuste
-- **gérer la conf NGINX**
-  - votre script doit aussi proposer un fichier de conf NGINX maîtrisé et robuste
-- **ajouter et configurer des services de sécurité**
-  - on pense à fail2ban, AIDE, ou autres
-
-> Réutilisez votre travail sur le sujet hardening du TP précédent évidemment. Réutilisez aussi ce que vous saviez déjà faire (bah si, non ?) comme fail2ban, ou l'application du principe du moindre privilège, la gestion de `sudo`. Enfin, soyez créatifs, c'est un exo libre.
-
-➜ **N'hésitez pas à :**
-
-- éclater le code dans plusieurs fichiers
-- écrire des fonctions plutôt que tout à la suite
-
-> Le but c'est de bosser sur le coeur du sujet : harden une machine Linux. En plus, être capable de l'automatiser comme ça on peut le lancer sur n'importe quelle nouvelle machine. Et aussi, vous faire prendre du skill sur `bash`.
-
-![Feels good](./img/feels_good.png)
+```
+sudo chmod +x script.sh
+sudo ./script.sh
+```
