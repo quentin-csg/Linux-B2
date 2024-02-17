@@ -111,8 +111,14 @@ server {
 
 # II. Hardening script
 
+- Configuration de la sécurité relatif au système d'exploitation
+- Installation et mise en place de nginx en http et https avec une page web de test
+- Configuration sécurisée du SSH avec authentification par clé rsa et mise en place de Fail2Ban
+- Installation de AIDE
+- Mise en place DOT
+
 ```
-Mettre script code.sh dans le home directory et créer un dossier conf avec les 3 fichiers de configuration présents sur le répo puis modifier le script en exécutable et le lancer avec un utilisateur ayant les droits sudo
+Mettre le script script.sh dans le home directory et créer un dossier conf avec les 4 fichiers de configuration présents sur le répo puis modifier le script en exécutable et le lancer avec un utilisateur ayant les droits sudo
 ```
 
 ```

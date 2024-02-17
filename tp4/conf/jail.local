@@ -376,7 +376,7 @@ logpath = /opt/openhab/logs/request.log
 # See "tests/files/logs/nginx-http-auth" or "filter.d/nginx-http-auth.conf" for usage example and details.
 [nginx-http-auth]
 # mode = normal
-enabled = true
+#enabled = true
 port    = http,https
 logpath = %(nginx_error_log)s
 
@@ -939,7 +939,6 @@ logpath  = /var/log/mumble-server/mumble-server.log
 # For Mac OS Screen Sharing Service (VNC)
 logpath  = /var/log/system.log
 logencoding = utf-8
-
 [haproxy-http-auth]
 # HAProxy by default doesn't log to file you'll need to set it up to forward
 # logs to a syslog server which would then write them to disk.

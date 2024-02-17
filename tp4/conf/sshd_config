@@ -1,18 +1,25 @@
 Include /etc/ssh/sshd_config.d/*.conf
 
+StrictModes yes
 Port 4433
 PermitRootLogin no
 MaxAuthTries 3
+MaxSessions 2
 PubkeyAuthentication yes
-
 AuthorizedKeysFile      .ssh/authorized_keys
 
+PasswordAuthentication no
 PermitEmptyPasswords no
-
+IgnoreRhosts yes
+UseDNS no
+PermitTunnel no
 AllowAgentForwarding no
 AllowTcpForwarding no
 X11Forwarding no
+UsePAM yes
 TCPKeepAlive yes
-ClientAliveInterval 100
+ClientAliveInterval 50
+ClientAliveCountMax 3
+LoginGraceTime 30
 
-Subsystem       sftp    /usr/libexec/openssh/sftp-server
+Subsystem sftp /usr/lib/ssh/sftp-server -f AUTHPRIV -l INFO
